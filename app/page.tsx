@@ -5,6 +5,7 @@ import { searchExaContent } from '@/actions/exa-actions';
 import { createChatCompletion } from '@/actions/openai-actions';
 import { Space_Grotesk } from 'next/font/google';
 import Image from 'next/image';
+import { ChatCompletionMessageParam } from 'openai/resources/chat';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 
@@ -57,10 +58,12 @@ export default function HomePage() {
 
       const topResults = result.results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
 
-      const summaryResponse = await createChatCompletion([
+      const messages: ChatCompletionMessageParam[] = [
         { role: 'system', content: 'You are a helpful assistant that provides structured information. Organize your response into relevant sections based on the query. Use markdown formatting with ## for section headers. For bullet points, use "•" instead of "-". When you use information from a specific source, cite it using [1], [2], etc., corresponding to the order of the sources provided.' },
         { role: 'user', content: `Please provide a comprehensive answer about "${searchQuery}" in a structured format, using appropriate sections. Cite your sources using [1], [2], etc. Here are the sources:\n\n${topResults.map((r, i) => `[${i+1}] ${r.title}: ${r.text}`).join('\n\n')}` }
-      ]);
+      ];
+
+      const summaryResponse = await createChatCompletion(messages);
 
       console.log('Raw OpenAI response:', summaryResponse);
 

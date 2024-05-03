@@ -5,7 +5,7 @@ import { searchExaContent } from '@/actions/exa-actions';
 import { createChatCompletion } from '@/actions/openai-actions';
 import { Space_Grotesk } from 'next/font/google';
 import Image from 'next/image';
-import { ChatCompletionMessageParam } from 'openai/resources/chat';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 
@@ -68,13 +68,13 @@ export default function HomePage() {
       console.log('Raw OpenAI response:', summaryResponse);
 
       // Simulate streaming effect
-      const words = summaryResponse.message.content.split(' ');
+      const words = summaryResponse.message.content?.split(' ') ?? [];
       for (let i = 0; i < words.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 50));
         setStreamedText(prev => prev + ' ' + words[i]);
       }
 
-      setSummary(summaryResponse.message.content);
+      setSummary(summaryResponse.message.content ?? '');
     } catch (error) {
       console.error('Error in handleSearch:', error);
     } finally {

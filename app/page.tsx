@@ -16,6 +16,34 @@ interface SearchResult {
   title: string;
 }
 
+const getFaviconUrl = (url: string) => {
+  try {
+    const domain = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+  } catch {
+    return '/default-favicon.png'; // Make sure this file exists in your public folder
+  }
+};
+
+const getColorFromString = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color = Math.floor(Math.abs((Math.sin(hash) * 16777215) % 1) * 16777215).toString(16);
+  return '#' + '0'.repeat(6 - color.length) + color;
+};
+
+const FaviconPlaceholder = ({ domain }: { domain: string }) => {
+  const color = getColorFromString(domain);
+  return (
+    <div 
+      style={{ backgroundColor: color }} 
+      className="w-4 h-4 rounded-full mr-2 flex-shrink-0"
+    />
+  );
+};
+
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -34,27 +62,20 @@ export default function HomePage() {
       console.log('Full Exa search results:', result);
       setSearchResults(result.results);
 
-      // Access the results array and sort it
       const topResults = result.results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
-      console.log('Top 5 Exa results:', topResults);
-      
-      // Combine text from top 5 results
       const combinedText = topResults.map(r => r.text).join('\n\n');
-      console.log('Combined text for OpenAI:', combinedText);
 
-      // Generate summary using OpenAI
       const summaryResponse = await createChatCompletion([
-        { role: 'system', content: 'You are a helpful assistant that provides structured information. Always organize your response into the following sections: "About", "Early Career", "Notable Achievements", "Awards", and "Current Status". If a section is not applicable, you may omit it.' },
-        { role: 'user', content: `Please provide information about ${searchQuery} in a structured format:\n\n${combinedText}` }
+        { role: 'system', content: 'You are a helpful assistant that provides structured information. Organize your response into relevant sections based on the query. Use markdown formatting with ## for section headers. For bullet points, use "•" instead of "-". When you use information from a specific source, cite it using [1], [2], etc., corresponding to the order of the sources provided.' },
+        { role: 'user', content: `Please provide a comprehensive answer about "${searchQuery}" in a structured format, using appropriate sections. Cite your sources using [1], [2], etc. Here are the sources:\n\n${topResults.map((r, i) => `[${i+1}] ${r.title}: ${r.text}`).join('\n\n')}` }
       ]);
 
       console.log('Raw OpenAI response:', summaryResponse);
-      console.log('OpenAI generated summary:', summaryResponse.message.content);
 
       // Simulate streaming effect
       const words = summaryResponse.message.content.split(' ');
       for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 50)); // Adjust delay as needed
+        await new Promise(resolve => setTimeout(resolve, 50));
         setStreamedText(prev => prev + ' ' + words[i]);
       }
 
@@ -67,17 +88,50 @@ export default function HomePage() {
   };
 
   const renderSummary = (content: string) => {
-    const sections = content.split('\n\n');
+    const sections = content.split(/(?=## )/);
     return sections.map((section, index) => {
       const [title, ...paragraphs] = section.split('\n');
       return (
         <div key={index} className="mb-6">
           <h3 className="text-xl font-semibold mb-3 text-purple-300">
-            {title.replace(/^#+\s*/, '')}
+            {title.replace(/^##\s*/, '')}
           </h3>
           {paragraphs.map((paragraph, pIndex) => (
             <p key={pIndex} className="mb-3 text-gray-300 leading-relaxed">
-              {paragraph}
+              {paragraph.split(/(\[[\d,\s]+\])/).map((part, partIndex) => {
+                if (part.match(/^\[[\d,\s]+\]$/)) {
+                  const sourceNumbers = part.slice(1, -1).split(',').map(num => parseInt(num.trim()) - 1);
+                  return (
+                    <sup key={partIndex} className="text-purple-400">
+                      {sourceNumbers.map((num, i) => (
+                        <a
+                          key={i}
+                          href={searchResults[num]?.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 hover:underline"
+                        >
+                          [{num + 1}]
+                        </a>
+                      ))}
+                    </sup>
+                  );
+                }
+                return part.split(/(\*\*.*?\*\*)/).map((subPart, subPartIndex) => {
+                  if (subPart.startsWith('**') && subPart.endsWith('**')) {
+                    return <strong key={subPartIndex} className="font-bold">{subPart.slice(2, -2)}</strong>;
+                  }
+                  if (subPart.trim().startsWith('•')) {
+                    return (
+                      <span key={subPartIndex} className="block ml-4">
+                        <span className="inline-block w-2 h-2 rounded-full bg-purple-400 mr-2"></span>
+                        {subPart.trim().slice(1)}
+                      </span>
+                    );
+                  }
+                  return subPart;
+                });
+              })}
             </p>
           ))}
         </div>
@@ -134,18 +188,27 @@ export default function HomePage() {
             <h2 className="text-xl font-semibold mb-4 text-purple-400">Sources</h2>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 pb-4">
-                {searchResults.slice(0, 5).map((result, index) => (
-                  <a
-                    key={index}
-                    href={result.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0 w-64 bg-gray-800 rounded-md p-3 hover:bg-gray-700 transition duration-200"
-                  >
-                    <h3 className="font-semibold text-sm text-purple-400 truncate">{result.title}</h3>
-                    <p className="text-xs text-gray-300 mt-1 line-clamp-2">{result.text}</p>
-                  </a>
-                ))}
+                {searchResults.slice(0, 5).map((result, index) => {
+                  const domain = new URL(result.url).hostname.replace('www.', '');
+                  return (
+                    <a
+                      key={index}
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 w-72 bg-gray-800 rounded-md p-3 hover:bg-gray-700 transition duration-200 flex flex-col justify-between"
+                    >
+                      <div>
+                        <h3 className="font-semibold text-sm text-purple-400 mb-2 line-clamp-1">{result.title}</h3>
+                        <p className="text-xs text-gray-300 line-clamp-3">{result.text}</p>
+                      </div>
+                      <div className="flex items-center mt-3 pt-2 border-t border-gray-700">
+                        <FaviconPlaceholder domain={domain} />
+                        <span className="text-xs text-gray-400 ml-2">{domain}</span>
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           </div>

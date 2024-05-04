@@ -4,7 +4,14 @@ import Exa from "exa-js";
 
 const exa = new Exa(process.env.EXA_API_KEY);
 
-export async function searchExaContent(query: string) {
+interface ExaSearchResult {
+  text: string;
+  score?: number;
+  url: string;
+  title: string | null;
+}
+
+export async function searchExaContent(query: string): Promise<{ results: ExaSearchResult[] }> {
   try {
     const result = await exa.searchAndContents(
       query,

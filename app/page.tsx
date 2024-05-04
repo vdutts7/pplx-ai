@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { searchExaContent } from '@/actions/exa-actions';
 import { createChatCompletion } from '@/actions/openai-actions';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import Image from 'next/image';
 
-const inter = Inter({ subsets: ['latin'] });
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 
 interface SearchResult {
@@ -15,15 +14,6 @@ interface SearchResult {
   url: string;
   title: string;
 }
-
-const getFaviconUrl = (url: string) => {
-  try {
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-  } catch {
-    return '/default-favicon.png'; // Make sure this file exists in your public folder
-  }
-};
 
 const getColorFromString = (str: string) => {
   let hash = 0;

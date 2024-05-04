@@ -215,7 +215,7 @@ export default function HomePage() {
         )}
 
         {(isLoading || summary) && (
-          <div className="bg-gray-800 rounded-md p-6 shadow-lg">
+          <div className={`bg-gray-800 rounded-md p-6 shadow-lg ${spaceGrotesk.className}`}>
             <h2 className="text-2xl font-semibold mb-6 text-purple-400">Answer</h2>
             <div className="prose prose-invert max-w-none">
               {isLoading ? (

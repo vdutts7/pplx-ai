@@ -1,101 +1,95 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react';
+import { searchExaContent } from '@/actions/exa-actions';
+import { createChatCompletion } from '@/actions/openai-actions';
+
+interface SearchResult {
+  text: string;
+  score?: number;
+  url: string;
+  title: string;
+}
+
+export default function HomePage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [summary, setSummary] = useState<string>('');
+
+  const handleSearch = async () => {
+    console.log('Search query:', searchQuery);
+    
+    try {
+      const result = await searchExaContent(searchQuery);
+      console.log('Full Exa search results:', result);
+      setSearchResults(result.results);
+
+      // Access the results array and sort it
+      const topResults = result.results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
+      console.log('Top 5 Exa results:', topResults);
+      
+      // Combine text from top 5 results
+      const combinedText = topResults.map(r => r.text).join('\n\n');
+      console.log('Combined text for OpenAI:', combinedText);
+
+      // Generate summary using OpenAI
+      const summaryResponse = await createChatCompletion([
+        { role: 'system', content: 'You are a helpful assistant that summarizes information.' },
+        { role: 'user', content: `Please summarize the following information:\n\n${combinedText}` }
+      ]);
+
+      console.log('Raw OpenAI response:', summaryResponse);
+      console.log('OpenAI generated summary:', summaryResponse.message.content);
+
+      setSummary(summaryResponse.message.content);
+    } catch (error) {
+      console.error('Error in handleSearch:', error);
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="p-4 max-w-6xl mx-auto">
+      <div className="flex mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border p-2 flex-grow rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter your search query"
         />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+        <button
+          onClick={handleSearch}
+          className="bg-blue-500 text-white p-2 rounded-r-md hover:bg-blue-600 transition duration-200"
+        >
+          Search
+        </button>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {searchResults.length > 0 && (
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex space-x-4 pb-2">
+            {searchResults.map((result, index) => (
+              <a
+                key={index}
+                href={result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 w-64 border rounded-md p-3 hover:shadow-md transition duration-200 bg-white"
+              >
+                <h3 className="font-semibold mb-1 text-sm truncate">{result.title}</h3>
+                <p className="text-xs text-gray-600 line-clamp-2">{result.text}</p>
+              </a>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+
+      {summary && (
+        <div className="bg-gray-100 rounded-md p-4">
+          <h2 className="text-lg font-semibold mb-2">AI-Generated Summary:</h2>
+          <p className="text-sm text-gray-800">{summary}</p>
+        </div>
+      )}
     </div>
   );
 }

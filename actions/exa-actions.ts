@@ -2,18 +2,23 @@
 
 import Exa from "exa-js";
 
+const exa = new Exa(process.env.EXA_API_KEY);
+
 export async function searchExaContent(query: string) {
-  const exa = new Exa("edcd858c-1c94-4575-9ab5-7da7005133b5");
+  try {
+    const result = await exa.searchAndContents(
+      query,
+      {
+        type: "neural",
+        useAutoprompt: true,
+        numResults: 10,
+        text: true
+      }
+    );
 
-  const result = await exa.searchAndContents(
-    query,
-    {
-      type: "neural",
-      useAutoprompt: true,
-      numResults: 10,
-      text: true
-    }
-  );
-
-  return result;
+    return result;
+  } catch (error) {
+    console.error('Error in searchExaContent:', error);
+    throw new Error('Failed to search Exa content');
+  }
 }

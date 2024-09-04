@@ -12,7 +12,7 @@ interface SearchResult {
   text: string;
   score?: number;
   url: string;
-  title: string;
+  title: string | null; // Change this line to allow null
 }
 
 const getColorFromString = (str: string) => {
@@ -50,7 +50,10 @@ export default function HomePage() {
     try {
       const result = await searchExaContent(searchQuery);
       console.log('Full Exa search results:', result);
-      setSearchResults(result.results);
+      setSearchResults(result.results.map(r => ({
+        ...r,
+        title: r.title || 'Untitled' // Provide a default title if it's null
+      })));
 
       const topResults = result.results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
 

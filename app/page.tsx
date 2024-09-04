@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { searchExaContent } from '@/actions/exa-actions';
 import { createChatCompletion } from '@/actions/openai-actions';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Space_Grotesk } from 'next/font/google';
 import Image from 'next/image';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
@@ -53,7 +53,6 @@ export default function HomePage() {
       setSearchResults(result.results);
 
       const topResults = result.results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
-      const combinedText = topResults.map(r => r.text).join('\n\n');
 
       const summaryResponse = await createChatCompletion([
         { role: 'system', content: 'You are a helpful assistant that provides structured information. Organize your response into relevant sections based on the query. Use markdown formatting with ## for section headers. For bullet points, use "•" instead of "-". When you use information from a specific source, cite it using [1], [2], etc., corresponding to the order of the sources provided.' },

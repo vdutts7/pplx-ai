@@ -6,11 +6,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function createChatCompletion(messages: OpenAI.Chat.ChatCompletionMessage[]) {
+export async function createChatCompletion(messages: Array<OpenAI.Chat.ChatCompletionMessageParam>) {
   try {
     const completion = await openai.chat.completions.create({
       messages: messages,
-      model: "gpt-4o",
+      model: "gpt-4",
     });
 
     return completion.choices[0];
